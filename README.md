@@ -5,13 +5,13 @@ This project implements metaheuristics to solve the Uncapacitated Multiple Alloc
 UMApHCP is a common problem in distribution systems planning, such as telecommunications and transportation. It consists of determining which nodes will be hubs and calculating the transportation cost of all node pairs, passing through at least one hub, to minimize the highest transportation cost among all pairs.
 
 # Key Features
-Input Processing: Reads node coordinates from an input file (inst200.txt).
-Distance Calculation: Computes Euclidean distances between all nodes.
-Hub Selection: Selects hubs based on total distance metrics using a sorting approach.
-Route Optimization: Determines optimal routes between nodes via hubs, minimizing transportation costs.
-Solution Construction: Builds an initial solution with selected hubs and assigned routes.
-Solution Management: Supports saving and loading solutions for further analysis.
-Performance Monitoring: Measures execution time for key operations (hub selection, cost calculation).
+Input Processing: Reads node coordinates from an input file (inst200.txt).  
+Distance Calculation: Computes Euclidean distances between all nodes.  
+Hub Selection: Selects hubs based on total distance metrics using a sorting approach.  
+Route Optimization: Determines optimal routes between nodes via hubs, minimizing transportation costs.  
+Solution Construction: Builds an initial solution with selected hubs and assigned routes.  
+Solution Management: Supports saving and loading solutions for further analysis.  
+Performance Monitoring: Measures execution time for key operations (hub selection, cost calculation).  
 Memory Management: Handles dynamic allocation and deallocation of resources to prevent leaks.
 
 # Important Note
