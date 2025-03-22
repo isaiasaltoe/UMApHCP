@@ -9,7 +9,7 @@
 
 
 int main() {
-    srand(time(NULL));
+    //srand(time(NULL));
     ler_dados("inst200.txt");
     calculo_distancias();
     
@@ -49,16 +49,17 @@ void ler_dados(char* arq) {
 }
 
 void calculo_distancias() {
-    distancias = (double**)malloc(numNos * sizeof(double*));
+    distancias = new double*[numNos];
     for (int i = 0; i < numNos; i++) {
-        distancias[i] = (double*)malloc(numNos * sizeof(double));
+        distancias[i] = new double[numNos];
     }
 
+    double dx, dy;
     for (int i = 0; i < numNos; i++) {
         for (int j = 0; j < numNos; j++) {
-            double dx = nos[i].x - nos[j].x;
-            double dy = nos[i].y - nos[j].y;
-            distancias[i][j] = sqrt(dx * dx + dy * dy);
+            dx = nos[i].x - nos[j].x;
+            dy = nos[i].y - nos[j].y;
+         distancias[i][j] = sqrt(dx * dx + dy * dy);
         }
     }
 }
