@@ -3,31 +3,47 @@
 #include <float.h>
 #include <cstdlib>
 #include <cstdio>
-#include "func.h"
-#include <time.h>
+#include <ctime>
 #include <algorithm>
+#include <vector>
+#include <random>
+#include "func.h"
+
 
 
 int main() {
+    // Ler dados e calcular distâncias
     ler_dados("inst200.txt");
     calculo_distancias();
 
-    int p = 50;
-    idSolucao solucao = Construir_Solucao_inicial(p);
+    // Parâmetros do algoritmo genético
+    int p = 50; // Número de hubs
+    int pop_size = POP_SIZE; // Tamanho da população
+    int max_gen = MAX_GEN; // Número máximo de gerações
+
+    // Executar algoritmo genético
+    Individuo melhor = algoritmo_genetico(p, pop_size, max_gen);
+
+    // Exibir a melhor solução encontrada
+    idSolucao solucao;
+    solucao.numNos = numNos;
+    solucao.p = p;
+    solucao.hubs = melhor.hubs;
+    solucao.rotas = nullptr; // Não estamos usando rotas aqui
+    solucao.fo = melhor.fitness;
 
     imprimir_solucao(solucao);
-    liberar_solucao(&solucao);
 
-    for (int i = 0; i < numNos; i++) {
-        delete[] distancias[i]; // Substituir free por delete[]
-    }
-    delete[] distancias; // Substituir free por delete[]
-    delete[] nos; // Substituir free por delete[]
+    // Liberar memória
+    liberar_individuo(&melhor);
+    for (int i = 0; i < numNos; i++) delete[] distancias[i];
+    delete[] distancias;
+    delete[] nos;
 
     return 0;
 }
 
-void ler_dados(char* arq) {
+void ler_dados( const char* arq) {
     FILE* f = fopen(arq, "r");
     if (f == NULL) {
         printf("Erro ao abrir o arquivo.\n");
@@ -59,53 +75,108 @@ void calculo_distancias() {
     }
 }
 
-/* 
-int* selecionar_hubs(int p) {
-    int* hubs = (int*)malloc(p * sizeof(int));
-    hubs[0] = 3;
-    hubs[1] = 5;
-    hubs[2] = 13;
-    hubs[3] = 16;
-    return hubs;
+// Função para gerar um indivíduo aleatório
+Individuo gerar_individuo(int p) {
+    Individuo ind;
+    ind.hubs = new int[p];
+
+    std::vector<int> candidatos(numNos);
+    for (int i = 0; i < numNos; i++) candidatos[i] = i;
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(candidatos.begin(), candidatos.end(), g);
+
+    for (int i = 0; i < p; i++) {
+        ind.hubs[i] = candidatos[i];
+    }
+
+    ind.fitness = calcular_custo_maximo(p, ind.hubs, 1.0, 0.75, 1.0, nullptr);
+
+    return ind;
 }
-*/
 
-int* selecionar_hubs(int p) {
-    double* somaDistancias = new double[numNos]; // Substituir malloc por new
-    int* hubs = new int[p]; // Substituir malloc por new
+// Função para gerar a população inicial
+void gerar_populacao(Individuo* populacao, int pop_size, int p) {
+    for (int i = 0; i < pop_size; i++) {
+        populacao[i] = gerar_individuo(p);
+    }
+}
 
-    for (int i = 0; i < numNos; i++) {
-        somaDistancias[i] = 0.0;
-        for (int j = 0; j < numNos; j++) {
-            somaDistancias[i] += distancias[i][j];
+// Função de seleção por torneio
+Individuo selecao_torneio(Individuo* pop, int pop_size) {
+    int idx1 = rand() % pop_size;
+    int idx2 = rand() % pop_size;
+    return (pop[idx1].fitness < pop[idx2].fitness) ? pop[idx1] : pop[idx2];
+}
+
+// Função de crossover (combinação de dois pais)
+Individuo crossover(Individuo pai1, Individuo pai2, int p) {
+    Individuo filho;
+    filho.hubs = new int[p];
+
+    int ponto = rand() % p;
+    for (int i = 0; i < ponto; i++) filho.hubs[i] = pai1.hubs[i];
+    for (int i = ponto; i < p; i++) filho.hubs[i] = pai2.hubs[i];
+
+    filho.fitness = calcular_custo_maximo(p, filho.hubs, 1.0, 0.75, 1.0, nullptr);
+    return filho;
+}
+
+// Função de mutação (alteração aleatória de um hub)
+void mutacao(Individuo* ind, int p) {
+    if ((rand() / (double)RAND_MAX) < TAXA_MUTACAO) {
+        int idx = rand() % p;
+        int novo_hub;
+        do {
+            novo_hub = rand() % numNos;
+        } while (std::find(ind->hubs, ind->hubs + p, novo_hub) != ind->hubs + p);
+        ind->hubs[idx] = novo_hub;
+    }
+}
+
+// Algoritmo genético
+Individuo algoritmo_genetico(int p, int pop_size, int max_gen) {
+    Individuo* populacao = new Individuo[pop_size];
+    gerar_populacao(populacao, pop_size, p);
+
+    Individuo melhor = populacao[0];
+
+    for (int gen = 0; gen < max_gen; gen++) {
+        Individuo* nova_populacao = new Individuo[pop_size];
+
+        for (int i = 0; i < pop_size; i++) {
+            Individuo pai1 = selecao_torneio(populacao, pop_size);
+            Individuo pai2 = selecao_torneio(populacao, pop_size);
+            Individuo filho = crossover(pai1, pai2, p);
+            mutacao(&filho, p);
+            nova_populacao[i] = filho;
+
+            if (filho.fitness < melhor.fitness) {
+                melhor = filho;
+            }
         }
+
+        for (int i = 0; i < pop_size; i++) liberar_individuo(&populacao[i]);
+        delete[] populacao;
+
+        populacao = nova_populacao;
     }
 
-    int* indices = new int[numNos]; // Substituir malloc por new
-    for (int i = 0; i < numNos; i++) {
-        indices[i] = i;
-    }
+    for (int i = 0; i < pop_size; i++) liberar_individuo(&populacao[i]);
+    delete[] populacao;
 
-    std::sort(indices, indices + numNos, [&somaDistancias](int i, int j) {
-        return somaDistancias[i] > somaDistancias[j];
-    });
-
-    int mid = p / 2;
-    for (int k = 0; k < mid; k++) {
-        hubs[k] = indices[k];
-    }
-
-    for (int k = mid; k < p; k++) {
-        hubs[k] = indices[numNos - 1 - (k - mid)];
-    }
-
-    delete[] somaDistancias; // Substituir free por delete[]
-    delete[] indices; // Substituir free por delete[]
-
-    return hubs;
+    return melhor;
 }
 
+// Função para liberar memória de um indivíduo
+void liberar_individuo(Individuo* ind) {
+    if (ind == nullptr || ind->hubs == nullptr) return;
+    delete[] ind->hubs;
+    ind->hubs = nullptr;
+}
 
+// Função para calcular o custo máximo (fitness)
 double calcular_custo_maximo(int p, int* hubs, float beta, float alpha, float lambda, idRota** rotas) {
     double maxCusto = 0.0;
     double custo_hub, custo_1hub, custo_2hubs;
@@ -137,7 +208,10 @@ double calcular_custo_maximo(int p, int* hubs, float beta, float alpha, float la
                 }
             }
 
-            rotas[i][j] = {i, origemHub, destinoHub, j, menorCusto};
+            if (rotas != nullptr) {
+                rotas[i][j] = {i, origemHub, destinoHub, j, menorCusto};
+            }
+
             if (menorCusto > maxCusto) {
                 maxCusto = menorCusto;
             }
@@ -147,47 +221,11 @@ double calcular_custo_maximo(int p, int* hubs, float beta, float alpha, float la
     return maxCusto;
 }
 
-
-idSolucao Construir_Solucao_inicial(int p) {
-    clock_t h;
-    double tempo;
-    const int rep_hubs = 1000;
-    const int rep_fo = 1000;
-
-    idSolucao solucao;
-    solucao.numNos = numNos;
-    solucao.p = p;
-
-    // Medir tempo da seleção de hubs (1 vez)
-    h = clock();  
-    solucao.hubs = selecionar_hubs(p); // Já usa new internamente
-    h = clock() - h;
-    tempo = (double)h / CLOCKS_PER_SEC;
-    printf("Tempo da seleção de hubs: %.5f segundos\n", tempo);
-
-    // Alocar memória para as rotas usando new
-    solucao.rotas = new idRota*[numNos]; // Alocar array de ponteiros
-    for (int i = 0; i < numNos; i++) {
-        solucao.rotas[i] = new idRota[numNos]; // Alocar cada linha da matriz
-    }
-
-    // Medir tempo da função objetivo (1 vez)
-    h = clock();
-    solucao.fo = calcular_custo_maximo(p, solucao.hubs, 1.0, 0.75, 1.0, solucao.rotas);
-    h = clock() - h;
-    tempo = (double)h / CLOCKS_PER_SEC;
-    printf("Tempo do cálculo da função objetivo: %.5f segundos\n", tempo);
-
-    return solucao;
-}
-
-
-
+// Função para imprimir a solução
 void imprimir_solucao(idSolucao solucao) {
-    printf("n: %d p: %d\n", solucao.numNos, solucao.p);      
+    printf("n: %d p: %d\n", solucao.numNos, solucao.p);
     printf("FO: %.2f\n", solucao.fo);
-    
-    
+
     printf("HUBS: [");
     for (int i = 0; i < solucao.p; i++) {
         printf("%d", solucao.hubs[i]);
@@ -196,129 +234,4 @@ void imprimir_solucao(idSolucao solucao) {
         }
     }
     printf("]\n");
-
-   
-    printf("OR H1 H2 DS CUSTO\n");
-    for (int i = 0; i < solucao.numNos; i++) {
-        for (int j = 0; j < solucao.numNos; j++) {
-            printf("%d %d %d %d %.2f\n",
-                solucao.rotas[i][j].OR,
-                solucao.rotas[i][j].H1,
-                solucao.rotas[i][j].H2,
-                solucao.rotas[i][j].DS,
-                solucao.rotas[i][j].custo);
-        }
-    }
-}
-
-void gravar_solucao(idSolucao solucao, char* arquivo_saida) {
-    FILE* f = fopen(arquivo_saida, "w");
-    if (f == NULL) {
-        printf("Erro ao abrir o arquivo.\n");
-        return;
-    }
-    fprintf(f, "n: %d p: %d\n", solucao.numNos, solucao.p);
-    fprintf(f, "FO: %.2f\n", solucao.fo);
-    fprintf(f, "HUBS: [");
-    for (int i = 0; i < solucao.p; i++) {
-        fprintf(f, "%d", solucao.hubs[i]);
-        if (i < solucao.p - 1) {
-            fprintf(f, ", ");
-        }
-    }
-    fprintf(f, "]\n");
-    fprintf (f, "OR H1 H2 DS CUSTO\n");
-    for (int i = 0; i < solucao.numNos; i++) {
-        for (int j = 0; j < solucao.numNos; j++) {
-            fprintf(f, "%d %d %d %d %.2f\n",
-                solucao.rotas[i][j].OR,
-                solucao.rotas[i][j].H1,
-                solucao.rotas[i][j].H2,
-                solucao.rotas[i][j].DS,
-                solucao.rotas[i][j].custo);
-        }
-    }
-    fclose(f);
-}
-
-idSolucao clonar_solucao(idSolucao solucao) {
-    idSolucao clone_solucao;
-
-    clone_solucao.fo = solucao.fo;
-    clone_solucao.numNos = solucao.numNos;
-    clone_solucao.p = solucao.p;
-
-    if (solucao.numNos <= 0) {
-        printf("Erro: Número de nós inválido (%d).\n", solucao.numNos);
-        exit(1);
-    }
-
-    clone_solucao.hubs = new int[solucao.p]; // Substituir malloc por new
-    for (int i = 0; i < solucao.p; i++) {
-        clone_solucao.hubs[i] = solucao.hubs[i];
-    }
-
-    clone_solucao.rotas = new idRota*[solucao.numNos]; // Substituir malloc por new
-    for (int i = 0; i < solucao.numNos; i++) {
-        clone_solucao.rotas[i] = new idRota[solucao.numNos]; // Substituir malloc por new
-        for (int j = 0; j < solucao.numNos; j++) {
-            clone_solucao.rotas[i][j] = solucao.rotas[i][j];
-        }
-    }
-
-    return clone_solucao;
-}
-
-void liberar_solucao(idSolucao *solucao) {
-    if (solucao == nullptr) return;
-
-    delete[] solucao->hubs; // Substituir free por delete[]
-
-    if (solucao->rotas != nullptr) {
-        for (int i = 0; i < solucao->numNos; i++) {
-            delete[] solucao->rotas[i]; // Substituir free por delete[]
-        }
-        delete[] solucao->rotas; // Substituir free por delete[]
-    }
-
-    solucao->hubs = nullptr;
-    solucao->rotas = nullptr;
-}
-
-void ler_solucao(idSolucao *solucao, const char* arquivo_entrada) {
-    FILE* f = fopen(arquivo_entrada, "r");
-    if (f == nullptr) {
-        printf("Erro ao abrir o arquivo: %s\n", arquivo_entrada);
-        return;
-    }
-
-    fscanf(f, "n: %d p: %d\n", &solucao->numNos, &solucao->p);
-
-    solucao->hubs = new int[solucao->p]; // Substituir malloc por new
-    for (int i = 0; i < solucao->p; i++) {
-        fscanf(f, "%d", &solucao->hubs[i]);
-        if (i < solucao->p - 1) {
-            fscanf(f, ", ");
-        }
-    }
-    fscanf(f, "]\n");
-
-    solucao->rotas = new idRota*[solucao->numNos]; // Substituir malloc por new
-    for (int i = 0; i < solucao->numNos; i++) {
-        solucao->rotas[i] = new idRota[solucao->numNos]; // Substituir malloc por new
-    }
-
-    fscanf(f, "OR H1 H2 DS CUSTO\n");
-    for (int i = 0; i < solucao->numNos; i++) {
-        for (int j = 0; j < solucao->numNos; j++) {
-            fscanf(f, "%d %d %d %d %lf\n",
-                &solucao->rotas[i][j].OR,
-                &solucao->rotas[i][j].H1,
-                &solucao->rotas[i][j].H2,
-                &solucao->rotas[i][j].DS,
-                &solucao->rotas[i][j].custo);
-        }
-    }
-
-    fclose(f);
 }
