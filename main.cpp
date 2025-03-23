@@ -9,26 +9,21 @@
 
 
 int main() {
-    //srand(time(NULL));
     ler_dados("inst200.txt");
     calculo_distancias();
-    
-    // parametro de numero de hubs
-    int p = 50;
-  
 
+    int p = 50;
     idSolucao solucao = Construir_Solucao_inicial(p);
 
     imprimir_solucao(solucao);
     liberar_solucao(&solucao);
-     
 
     for (int i = 0; i < numNos; i++) {
-        free(distancias[i]);
+        delete[] distancias[i]; // Substituir free por delete[]
     }
-    free(distancias);
-    free(nos);
-     
+    delete[] distancias; // Substituir free por delete[]
+    delete[] nos; // Substituir free por delete[]
+
     return 0;
 }
 
@@ -41,7 +36,7 @@ void ler_dados(char* arq) {
     fscanf(f, "%d", &numNos);
     printf("Número de nós: %d\n", numNos);
 
-    nos = (idNo*)malloc(numNos * sizeof(idNo));
+    nos = new idNo[numNos]; 
     for (int i = 0; i < numNos; i++) {
         fscanf(f, "%lf %lf", &nos[i].x, &nos[i].y);
     }
@@ -49,9 +44,9 @@ void ler_dados(char* arq) {
 }
 
 void calculo_distancias() {
-    distancias = new double*[numNos];
+    distancias = new double*[numNos]; 
     for (int i = 0; i < numNos; i++) {
-        distancias[i] = new double[numNos];
+        distancias[i] = new double[numNos]; 
     }
 
     double dx, dy;
@@ -59,7 +54,7 @@ void calculo_distancias() {
         for (int j = 0; j < numNos; j++) {
             dx = nos[i].x - nos[j].x;
             dy = nos[i].y - nos[j].y;
-         distancias[i][j] = sqrt(dx * dx + dy * dy);
+            distancias[i][j] = sqrt(dx * dx + dy * dy);
         }
     }
 }
@@ -76,8 +71,8 @@ int* selecionar_hubs(int p) {
 */
 
 int* selecionar_hubs(int p) {
-    double* somaDistancias = (double*)malloc(numNos * sizeof(double));
-    int* hubs = (int*)malloc(p * sizeof(int));
+    double* somaDistancias = new double[numNos]; // Substituir malloc por new
+    int* hubs = new int[p]; // Substituir malloc por new
 
     for (int i = 0; i < numNos; i++) {
         somaDistancias[i] = 0.0;
@@ -86,7 +81,7 @@ int* selecionar_hubs(int p) {
         }
     }
 
-    int* indices = (int*)malloc(numNos * sizeof(int));
+    int* indices = new int[numNos]; // Substituir malloc por new
     for (int i = 0; i < numNos; i++) {
         indices[i] = i;
     }
@@ -95,18 +90,17 @@ int* selecionar_hubs(int p) {
         return somaDistancias[i] > somaDistancias[j];
     });
 
-    
     int mid = p / 2;
     for (int k = 0; k < mid; k++) {
-        hubs[k] = indices[k];  
+        hubs[k] = indices[k];
     }
 
     for (int k = mid; k < p; k++) {
-        hubs[k] = indices[numNos - 1 - (k - mid)];  
+        hubs[k] = indices[numNos - 1 - (k - mid)];
     }
 
-    free(somaDistancias);
-    free(indices);
+    delete[] somaDistancias; // Substituir free por delete[]
+    delete[] indices; // Substituir free por delete[]
 
     return hubs;
 }
@@ -285,31 +279,14 @@ idSolucao clonar_solucao(idSolucao solucao) {
         exit(1);
     }
 
- 
-    clone_solucao.hubs = (int*)malloc(solucao.p * sizeof(int));
-    if (clone_solucao.hubs == NULL) {
-        printf("Erro ao alocar memória para hubs.\n");
-        exit(1);
-    }
-    
+    clone_solucao.hubs = new int[solucao.p]; // Substituir malloc por new
     for (int i = 0; i < solucao.p; i++) {
         clone_solucao.hubs[i] = solucao.hubs[i];
     }
 
-    
-    clone_solucao.rotas = (idRota**)malloc(solucao.numNos * sizeof(idRota*));
-    if (clone_solucao.rotas == NULL) {
-        printf("Erro ao alocar memória para rotas.\n");
-        exit(1);
-    }
-
+    clone_solucao.rotas = new idRota*[solucao.numNos]; // Substituir malloc por new
     for (int i = 0; i < solucao.numNos; i++) {
-        clone_solucao.rotas[i] = (idRota*)malloc(solucao.numNos * sizeof(idRota));
-        if (clone_solucao.rotas[i] == NULL) {
-            printf("Erro ao alocar memória para rotas[%d].\n", i);
-            exit(1);
-        }
-
+        clone_solucao.rotas[i] = new idRota[solucao.numNos]; // Substituir malloc por new
         for (int j = 0; j < solucao.numNos; j++) {
             clone_solucao.rotas[i][j] = solucao.rotas[i][j];
         }
@@ -319,42 +296,31 @@ idSolucao clonar_solucao(idSolucao solucao) {
 }
 
 void liberar_solucao(idSolucao *solucao) {
-    if (solucao == NULL) return;  
+    if (solucao == nullptr) return;
 
-    free(solucao->hubs);
+    delete[] solucao->hubs; // Substituir free por delete[]
 
-    if (solucao->rotas != NULL) {
+    if (solucao->rotas != nullptr) {
         for (int i = 0; i < solucao->numNos; i++) {
-            free(solucao->rotas[i]);
+            delete[] solucao->rotas[i]; // Substituir free por delete[]
         }
-        free(solucao->rotas);
+        delete[] solucao->rotas; // Substituir free por delete[]
     }
 
-   
-    solucao->hubs = NULL;
-    solucao->rotas = NULL;
+    solucao->hubs = nullptr;
+    solucao->rotas = nullptr;
 }
 
 void ler_solucao(idSolucao *solucao, const char* arquivo_entrada) {
     FILE* f = fopen(arquivo_entrada, "r");
-    if (f == NULL) {
+    if (f == nullptr) {
         printf("Erro ao abrir o arquivo: %s\n", arquivo_entrada);
         return;
     }
 
-    
     fscanf(f, "n: %d p: %d\n", &solucao->numNos, &solucao->p);
-    
- 
-    solucao->hubs = (int*)malloc(solucao->p * sizeof(int));
-    if (solucao->hubs == NULL) {
-        printf("Erro ao alocar memória para hubs.\n");
-        fclose(f);
-        return;
-    }
 
- 
-    fscanf(f, "HUBS: [");
+    solucao->hubs = new int[solucao->p]; // Substituir malloc por new
     for (int i = 0; i < solucao->p; i++) {
         fscanf(f, "%d", &solucao->hubs[i]);
         if (i < solucao->p - 1) {
@@ -363,13 +329,11 @@ void ler_solucao(idSolucao *solucao, const char* arquivo_entrada) {
     }
     fscanf(f, "]\n");
 
-    
-    solucao->rotas = (idRota**)malloc(solucao->numNos * sizeof(idRota*));
+    solucao->rotas = new idRota*[solucao->numNos]; // Substituir malloc por new
     for (int i = 0; i < solucao->numNos; i++) {
-        solucao->rotas[i] = (idRota*)malloc(solucao->numNos * sizeof(idRota));
+        solucao->rotas[i] = new idRota[solucao->numNos]; // Substituir malloc por new
     }
 
-    
     fscanf(f, "OR H1 H2 DS CUSTO\n");
     for (int i = 0; i < solucao->numNos; i++) {
         for (int j = 0; j < solucao->numNos; j++) {
