@@ -5,29 +5,44 @@
 #include <cstdio>
 #include "func.h"
 #include <time.h>
+#include <vector>
+#include <random>
 #include <algorithm>
 
 
 int main() {
+    printf("Iniciando programa...\n");
+    srand(time(NULL));
+
+    printf("Lendo dados da instância...\n");
     ler_dados("inst200.txt");
     calculo_distancias();
 
+    printf("Iniciando algoritmo genético...\n");
     int p = 50;
-    idSolucao solucao = Construir_Solucao_inicial(p);
+    int pop_size = POP_SIZE;
+    int max_gen = MAX_GEN;
+    double tempo_limite = 300;
 
-    imprimir_solucao(solucao);
-    liberar_solucao(&solucao);
+    Individuo melhor = algoritmo_genetico(p, pop_size, max_gen, tempo_limite);
 
-    for (int i = 0; i < numNos; i++) {
-        delete[] distancias[i]; // Substituir free por delete[]
+    printf("Execução do algoritmo concluída!\n");
+    printf("Melhor FO: %.2f\n", melhor.fitness);
+    printf("Hubs selecionados: ");
+    for (int i = 0; i < p; i++) {
+        printf("%d ", melhor.hubs[i]);
     }
-    delete[] distancias; // Substituir free por delete[]
-    delete[] nos; // Substituir free por delete[]
+    printf("\n");
+
+    liberar_individuo(&melhor);
+    for (int i = 0; i < numNos; i++) delete[] distancias[i];
+    delete[] distancias;
+    delete[] nos;
 
     return 0;
 }
 
-void ler_dados(char* arq) {
+void ler_dados(const char* arq) {
     FILE* f = fopen(arq, "r");
     if (f == NULL) {
         printf("Erro ao abrir o arquivo.\n");
@@ -36,12 +51,14 @@ void ler_dados(char* arq) {
     fscanf(f, "%d", &numNos);
     printf("Número de nós: %d\n", numNos);
 
-    nos = new idNo[numNos]; 
+    nos = new idNo[numNos];
     for (int i = 0; i < numNos; i++) {
         fscanf(f, "%lf %lf", &nos[i].x, &nos[i].y);
     }
     fclose(f);
 }
+
+
 
 void calculo_distancias() {
     distancias = new double*[numNos]; 
@@ -70,41 +87,106 @@ int* selecionar_hubs(int p) {
 }
 */
 
-int* selecionar_hubs(int p) {
-    double* somaDistancias = new double[numNos]; // Substituir malloc por new
-    int* hubs = new int[p]; // Substituir malloc por new
-
-    for (int i = 0; i < numNos; i++) {
-        somaDistancias[i] = 0.0;
-        for (int j = 0; j < numNos; j++) {
-            somaDistancias[i] += distancias[i][j];
-        }
-    }
-
-    int* indices = new int[numNos]; // Substituir malloc por new
-    for (int i = 0; i < numNos; i++) {
-        indices[i] = i;
-    }
-
-    std::sort(indices, indices + numNos, [&somaDistancias](int i, int j) {
-        return somaDistancias[i] > somaDistancias[j];
-    });
-
-    int mid = p / 2;
-    for (int k = 0; k < mid; k++) {
-        hubs[k] = indices[k];
-    }
-
-    for (int k = mid; k < p; k++) {
-        hubs[k] = indices[numNos - 1 - (k - mid)];
-    }
-
-    delete[] somaDistancias; // Substituir free por delete[]
-    delete[] indices; // Substituir free por delete[]
-
-    return hubs;
+void liberar_individuo(Individuo* ind) {
+    delete[] ind->hubs;
 }
 
+
+
+Individuo gerar_individuo(int p) {
+    Individuo ind;
+    ind.hubs = new int[p];
+
+    std::vector<int> candidatos(numNos);
+    for (int i = 0; i < numNos; i++) candidatos[i] = i;
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(candidatos.begin(), candidatos.end(), g);
+
+    for (int i = 0; i < p; i++) {
+        ind.hubs[i] = candidatos[i];
+    }
+
+    ind.fitness = calcular_custo_maximo(p, ind.hubs, 1.0, 0.75, 1.0, nullptr);
+
+    return ind;
+}
+
+void gerar_populacao(Individuo* populacao, int pop_size, int p) {
+    for (int i = 0; i < pop_size; i++) {
+        populacao[i] = gerar_individuo(p);
+    }
+}
+
+
+Individuo selecao_torneio(Individuo* pop, int pop_size) {
+    int idx1 = rand() % pop_size;
+    int idx2 = rand() % pop_size;
+    return (pop[idx1].fitness < pop[idx2].fitness) ? pop[idx1] : pop[idx2];
+}
+
+Individuo crossover(Individuo pai1, Individuo pai2, int p) {
+    Individuo filho;
+    filho.hubs = new int[p];
+
+    int ponto = rand() % p;
+    for (int i = 0; i < ponto; i++) filho.hubs[i] = pai1.hubs[i];
+    for (int i = ponto; i < p; i++) filho.hubs[i] = pai2.hubs[i];
+
+    filho.fitness = calcular_custo_maximo(p, filho.hubs, 1.0, 0.75, 1.0, nullptr);
+    return filho;
+}
+
+void mutacao(Individuo* ind, int p) {
+    if ((rand() / (double)RAND_MAX) < TAXA_MUTACAO) {
+        int idx = rand() % p;
+        int novo_hub;
+        do {
+            novo_hub = rand() % numNos;
+        } while (std::find(ind->hubs, ind->hubs + p, novo_hub) != ind->hubs + p);
+        ind->hubs[idx] = novo_hub;
+    }
+}
+
+Individuo algoritmo_genetico(int p, int pop_size, int max_gen, double tempo_limite) {
+    clock_t inicio = clock();
+    Individuo* populacao = new Individuo[pop_size];
+    gerar_populacao(populacao, pop_size, p);
+
+    Individuo melhor = populacao[0];
+
+    for (int gen = 0; gen < max_gen; gen++) {
+        // Verificar tempo limite
+        double tempo_gasto = (double)(clock() - inicio) / CLOCKS_PER_SEC;
+        if (tempo_gasto >= tempo_limite) break;
+
+        Individuo* nova_populacao = new Individuo[pop_size];
+
+        for (int i = 0; i < pop_size / 2; i++) {
+            Individuo pai1 = selecao_torneio(populacao, pop_size);
+            Individuo pai2 = selecao_torneio(populacao, pop_size);
+            Individuo filho = crossover(pai1, pai2, p);
+            mutacao(&filho, p);
+            nova_populacao[i] = filho;
+
+            if (filho.fitness < melhor.fitness) {
+                melhor = filho;
+            }
+        }
+
+        for (int i = 0; i < pop_size; i++) liberar_individuo(&populacao[i]);
+        delete[] populacao;
+
+        populacao = nova_populacao;
+    }
+
+    // Liberar memória
+    for (int i = 0; i < pop_size; i++) liberar_individuo(&populacao[i]);
+    delete[] populacao;
+
+    return melhor;
+}
 
 double calcular_custo_maximo(int p, int* hubs, float beta, float alpha, float lambda, idRota** rotas) {
     double maxCusto = 0.0;
@@ -147,7 +229,7 @@ double calcular_custo_maximo(int p, int* hubs, float beta, float alpha, float la
     return maxCusto;
 }
 
-
+/* 
 idSolucao Construir_Solucao_inicial(int p) {
     clock_t h;
     double tempo;
@@ -180,7 +262,7 @@ idSolucao Construir_Solucao_inicial(int p) {
 
     return solucao;
 }
-
+*/
 
 
 void imprimir_solucao(idSolucao solucao) {
@@ -211,7 +293,7 @@ void imprimir_solucao(idSolucao solucao) {
     }
 }
 
-void gravar_solucao(idSolucao solucao, char* arquivo_saida) {
+void gravar_solucao(idSolucao solucao, const char* arquivo_saida) {
     FILE* f = fopen(arquivo_saida, "w");
     if (f == NULL) {
         printf("Erro ao abrir o arquivo.\n");
@@ -227,7 +309,7 @@ void gravar_solucao(idSolucao solucao, char* arquivo_saida) {
         }
     }
     fprintf(f, "]\n");
-    fprintf (f, "OR H1 H2 DS CUSTO\n");
+    fprintf(f, "OR H1 H2 DS CUSTO\n");
     for (int i = 0; i < solucao.numNos; i++) {
         for (int j = 0; j < solucao.numNos; j++) {
             fprintf(f, "%d %d %d %d %.2f\n",
