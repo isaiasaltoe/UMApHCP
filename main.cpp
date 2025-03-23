@@ -114,68 +114,45 @@ int* selecionar_hubs(int p) {
 
 double calcular_custo_maximo(int p, int* hubs, float beta, float alpha, float lambda, idRota** rotas) {
     double maxCusto = 0.0;
+    double custo_hub, custo_1hub, custo_2hubs;
+    int origemHub, destinoHub;
 
-    
     for (int i = 0; i < numNos; i++) {
         for (int j = 0; j < numNos; j++) {
             double menorCusto = DBL_MAX;
-            int origemHub = -1;
-            int destinoHub = -1;
+            origemHub = -1;
+            destinoHub = -1;
 
-            
-            if (i == j) {
-                for (int k = 0; k < p; k++) {
-                    int hub_k = hubs[k];
-                    double custo_hub = beta * distancias[i][hub_k] + lambda * distancias[hub_k][i];
-                    if (custo_hub < menorCusto) {
-                        menorCusto = custo_hub;
-                        origemHub = hub_k;
-                        destinoHub = hub_k; 
-                    }
+            for (int k = 0; k < p; k++) {
+                int hub_k = hubs[k];
+                custo_hub = beta * distancias[i][hub_k] + lambda * distancias[hub_k][j];
+                if (custo_hub < menorCusto) {
+                    menorCusto = custo_hub;
+                    origemHub = hub_k;
+                    destinoHub = hub_k;
                 }
-            } else {
-                
-                for (int k = 0; k < p; k++) {
-                    int hub_k = hubs[k];
-                    double custo_1hub = beta * distancias[i][hub_k] + lambda * distancias[hub_k][j];
-                    if (custo_1hub < menorCusto) {
-                        menorCusto = custo_1hub;
+
+                for (int l = 0; l < p; l++) {
+                    int hub_l = hubs[l];
+                    custo_2hubs = beta * distancias[i][hub_k] + alpha * distancias[hub_k][hub_l] + lambda * distancias[hub_l][j];
+                    if (custo_2hubs < menorCusto) {
+                        menorCusto = custo_2hubs;
                         origemHub = hub_k;
-                        destinoHub = hub_k;
-                    }
-
-                    for (int l = 0; l < p; l++) {
-                        int hub_l = hubs[l];
-                        double custo_2hubs = beta * distancias[i][hub_k] + 
-                                             alpha * distancias[hub_k][hub_l] + 
-                                             lambda * distancias[hub_l][j];
-
-                        if (custo_2hubs < menorCusto) {
-                            menorCusto = custo_2hubs;
-                            origemHub = hub_k;
-                            destinoHub = hub_l;
-                        }
+                        destinoHub = hub_l;
                     }
                 }
             }
-             
-        
-            
-            rotas[i][j].OR = i;
-            rotas[i][j].DS = j;
-            rotas[i][j].H1 = origemHub;
-            rotas[i][j].H2 = destinoHub;
-            rotas[i][j].custo = menorCusto;
 
+            rotas[i][j] = {i, origemHub, destinoHub, j, menorCusto};
             if (menorCusto > maxCusto) {
                 maxCusto = menorCusto;
             }
         }
-
-        
     }
+
     return maxCusto;
 }
+
 
 idSolucao Construir_Solucao_inicial(int p) {
     clock_t h;
