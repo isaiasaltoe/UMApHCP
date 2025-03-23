@@ -158,51 +158,25 @@ idSolucao Construir_Solucao_inicial(int p) {
     solucao.numNos = numNos;
     solucao.p = p;
 
-   
     // Medir tempo da seleção de hubs (1 vez)
     h = clock();  
-    solucao.hubs = selecionar_hubs(p);
+    solucao.hubs = selecionar_hubs(p); // Já usa new internamente
     h = clock() - h;
     tempo = (double)h / CLOCKS_PER_SEC;
     printf("Tempo da seleção de hubs: %.5f segundos\n", tempo);
-     
-    
-     /*
-    //Medir tempo da seleção de hubs (10000 vezes)
-    h = clock();
-    for (int i = 0; i < rep_hubs; i++) {
-        solucao.hubs = selecionar_hubs(p);
-    }
-    h = clock() - h;
-    tempo = (double)h / CLOCKS_PER_SEC;
-    printf("Tempo da seleção de hubs executando %d vezes: %.5f segundos\n", rep_hubs, tempo);
-     */
-    
-    
-    // Alocar memória para as rotas
-    solucao.rotas = (idRota**)malloc(numNos * sizeof(idRota*));
+
+    // Alocar memória para as rotas usando new
+    solucao.rotas = new idRota*[numNos]; // Alocar array de ponteiros
     for (int i = 0; i < numNos; i++) {
-        solucao.rotas[i] = (idRota*)malloc(numNos * sizeof(idRota));
+        solucao.rotas[i] = new idRota[numNos]; // Alocar cada linha da matriz
     }
-    
+
     // Medir tempo da função objetivo (1 vez)
     h = clock();
     solucao.fo = calcular_custo_maximo(p, solucao.hubs, 1.0, 0.75, 1.0, solucao.rotas);
     h = clock() - h;
     tempo = (double)h / CLOCKS_PER_SEC;
     printf("Tempo do cálculo da função objetivo: %.5f segundos\n", tempo);
-     
-  /*
-    // Medir tempo da função objetivo (1000 vezes)
-    h = clock();
-    for (int i = 0; i < rep_fo; i++) {
-        calcular_custo_maximo(p, solucao.hubs, 1.0, 0.75, 1.0, solucao.rotas);
-    }
-    h = clock() - h;
-    tempo = (double)h / CLOCKS_PER_SEC;
-    printf("Tempo do cálculo da função objetivo executando %d vezes: %.5f segundos\n", rep_fo, tempo);
-   */
-
 
     return solucao;
 }
