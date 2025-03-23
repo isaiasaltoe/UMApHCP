@@ -1,53 +1,45 @@
+// Constantes
+const int POP_SIZE = 50; // Tamanho da população
+const int MAX_GEN = 100 ; // Número máximo de gerações
+const double TAXA_MUTACAO = 0.01; // Taxa de mutação
 
-
-#define MAX_NOS 200
-#define MAX_HUBS 50 
-
-
-
-//Estrutura dos Nós
-typedef struct nos{
+// Estruturas de dados
+struct idNo {
     double x, y;
-    int id;
-}idNo;
+};
 
+struct idRota {
+    int OR, H1, H2, DS;
+    double custo;
+};
 
+struct Individuo {
+    int* hubs; // Conjunto de hubs
+    double fitness; // Valor da função objetivo (custo máximo)
+};
 
-//Estrutura de rota
-typedef struct rota{
-int OR;  // Nó de origem
-int H1;  // HUB 1
-int H2;  // HUB 2
-int DS; //  Nó de destino
-double custo;  // Custo de transporte entre cada par 
- 
+struct idSolucao {
+    int numNos, p;
+    int* hubs;
+    idRota** rotas;
+    double fo;
+};
 
-}idRota;
+// Variáveis globais
+int numNos = 0;
+idNo* nos = nullptr;
+double** distancias = nullptr;
 
-//Estrutura de solução
-typedef struct solucao{
-int numNos;
-int p; 
-double fo;
-int* hubs; 
-idRota** rotas;          
-}idSolucao;
-
-
-
-//Dados de entrada
-int numNos;
-idNo *nos;
-double **distancias;
-
-// Declaração de funções 
-void ler_dados(char* arq);
+// Protótipos de funções
+void ler_dados(const char* arq);
 void calculo_distancias();
-int* selecionar_hubs(int p);
+void liberar_individuo(Individuo* ind);
+Individuo gerar_individuo(int p);
+void gerar_populacao(Individuo* populacao, int pop_size, int p);
+Individuo selecao_torneio(Individuo* pop, int pop_size);
+Individuo crossover(Individuo pai1, Individuo pai2, int p);
+void mutacao(Individuo* ind, int p);
+Individuo algoritmo_genetico(int p, int pop_size, int max_gen);
 double calcular_custo_maximo(int p, int* hubs, float beta, float alpha, float lambda, idRota** rotas);
-idSolucao Construir_Solucao_inicial(int p);
-idSolucao clonar_solucao(idSolucao solucao);
-void liberar_solucao(idSolucao *solucao);
-void gravar_solucao(idSolucao solucao, char* arquivo_saida);
 void imprimir_solucao(idSolucao solucao);
-void ler_solucao(idSolucao *solucao, const char* arquivo_entrada);
+void liberar_solucao(idSolucao* solucao);
