@@ -1,6 +1,6 @@
 // Constantes
 const int POP_SIZE =100; // Tamanho da população
-const int MAX_GEN = 1000 ; // Número máximo de gerações
+const int MAX_GEN = 500 ; // Número máximo de gerações
 const double TAXA_MUTACAO = 0.01; // Taxa de mutação
 
 // Estruturas de dados
@@ -43,5 +43,5 @@ Individuo algoritmo_genetico(int p, int pop_size, int max_gen, int tempo_limite)
 double calcular_custo_maximo(int p, int* hubs, float beta, float alpha, float lambda, idRota** rotas);
 void imprimir_solucao(idSolucao solucao);
 void liberar_solucao(idSolucao* solucao);
-void salvar_resultados(const char* arquivo, double melhorFO, double mediaFO, double desvio, double tempoMedio, double tempoMelhor);
+void salvar_resultados(const char* arquivo, double melhorFO, double mediaFO, double desvio, double tempoMedio, double tempoMelhor, int max_gen, int pop_size);
 void executar_algoritmo_genetico(int p, int pop_size, int max_gen, int tempo_limite);

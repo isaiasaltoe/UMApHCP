@@ -13,11 +13,11 @@
 // Função principal
 int main() {
     // Ler dados e calcular distâncias
-    ler_dados("inst5.txt");
+    ler_dados("inst20.txt");
     calculo_distancias();
 
     // Parâmetros do algoritmo genético
-    int p = 2;  // Número de hubs
+    int p = 5;  // Número de hubs
     int pop_size = POP_SIZE;  // Tamanho da população
     int max_gen = MAX_GEN;  // Número máximo de gerações
     int tempo_limite = 300;  // Limite de tempo em segundos para instâncias de 100 e 200 nós
@@ -99,26 +99,35 @@ void executar_algoritmo_genetico(int p, int pop_size, int max_gen, int tempo_lim
     printf("Tempo Médio: %.2f segundos\n", tempoMedio);
     printf("Tempo Melhor: %.2f segundos\n", tempoMelhor);
     
-    // Aqui você pode gravar os resultados em um arquivo, como o solicitado no trabalho.
-    salvar_resultados("resultados.txt", melhorFO, mediaFO, desvio, tempoMedio, tempoMelhor);
+    // Grava os resultados com os parâmetros do algoritmo genético
+    salvar_resultados("resultados.txt", melhorFO, mediaFO, desvio, tempoMedio, tempoMelhor, max_gen, pop_size);
 }
 
+
 // Função para salvar os resultados em um arquivo
-void salvar_resultados(const char* arquivo, double melhorFO, double mediaFO, double desvio, double tempoMedio, double tempoMelhor) {
+void salvar_resultados(const char* arquivo, double melhorFO, double mediaFO, double desvio, double tempoMedio, double tempoMelhor, int max_gen, int pop_size) {
     FILE* f = fopen(arquivo, "a");
     if (f == nullptr) {
         printf("Erro ao abrir o arquivo para salvar os resultados.\n");
         return;
     }
 
+  
+    fprintf(f, "Gerações: %d\n", max_gen);
+    fprintf(f, "Tamanho da População: %d\n", pop_size);
+
+    fprintf(f, "Resultados do Algoritmo Genético:\n");
     fprintf(f, "Melhor FO: %.2f\n", melhorFO);
     fprintf(f, "FO Média: %.2f\n", mediaFO);
     fprintf(f, "Desvio: %.2f%%\n", desvio);
     fprintf(f, "Tempo Médio: %.2f segundos\n", tempoMedio);
     fprintf(f, "Tempo Melhor: %.2f segundos\n", tempoMelhor);
 
+    fprintf(f, "\n");
+
     fclose(f);
 }
+
 
 // Função para gerar um indivíduo aleatório
 Individuo gerar_individuo(int p) {
