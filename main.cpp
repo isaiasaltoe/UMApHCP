@@ -10,38 +10,24 @@
 #include "func.h"
 
 
-
+// Função principal
 int main() {
     // Ler dados e calcular distâncias
-    ler_dados("inst200.txt");
+    ler_dados("inst20.txt");
     calculo_distancias();
 
     // Parâmetros do algoritmo genético
-    int p = 50; // Número de hubs
-    int pop_size = POP_SIZE; // Tamanho da população
-    int max_gen = MAX_GEN; // Número máximo de gerações
+    int p = 5;  // Número de hubs
+    int pop_size = POP_SIZE;  // Tamanho da população
+    int max_gen = MAX_GEN;  // Número máximo de gerações
+    int tempo_limite = 300;  // Limite de tempo em segundos para instâncias de 100 e 200 nós
 
-    // Executar algoritmo genético
-    Individuo melhor = algoritmo_genetico(p, pop_size, max_gen);
-
-    // Exibir a melhor solução encontrada
-    idSolucao solucao;
-    solucao.numNos = numNos;
-    solucao.p = p;
-    solucao.hubs = melhor.hubs;
-    solucao.rotas = nullptr; // Não estamos usando rotas aqui
-    solucao.fo = melhor.fitness;
-
-    imprimir_solucao(solucao);
-
-    // Liberar memória
-    liberar_individuo(&melhor);
-    for (int i = 0; i < numNos; i++) delete[] distancias[i];
-    delete[] distancias;
-    delete[] nos;
-
+    // Executar o algoritmo genético 3 vezes para a instância com 50 hubs
+    executar_algoritmo_genetico(p, pop_size, max_gen, tempo_limite);
+    
     return 0;
 }
+
 
 void ler_dados( const char* arq) {
     FILE* f = fopen(arq, "r");
@@ -74,6 +60,74 @@ void calculo_distancias() {
         }
     }
 }
+
+
+// Função para rodar o algoritmo genético 3 vezes para cada variação de instância e número de hubs
+void executar_algoritmo_genetico(int p, int pop_size, int max_gen, int tempo_limite) {
+    int num_execucoes = 3;
+    double melhorFO = DBL_MAX;
+    double somaFO = 0.0;
+    double somaTempo = 0.0;
+    double somaTempoMelhor = 0.0;
+    
+    for (int i = 0; i < num_execucoes; i++) {
+        clock_t start = clock();
+        
+        Individuo melhor = algoritmo_genetico(p, pop_size, max_gen, tempo_limite);
+        
+        clock_t end = clock();
+        double tempo_execucao = (double)(end - start) / CLOCKS_PER_SEC;
+        somaTempo += tempo_execucao;
+        
+        somaFO += melhor.fitness;
+        if (melhor.fitness < melhorFO) {
+            melhorFO = melhor.fitness;
+            somaTempoMelhor += tempo_execucao;
+        }
+        
+        liberar_individuo(&melhor);
+    }
+    
+    double mediaFO = somaFO / num_execucoes;
+    double desvio = ((mediaFO - melhorFO) / melhorFO) * 100;
+    double tempoMedio = somaTempo / num_execucoes;
+    double tempoMelhor = somaTempoMelhor / num_execucoes;
+    
+    printf("Melhor FO: %.2f\n", melhorFO);
+    printf("FO Média: %.2f\n", mediaFO);
+    printf("Desvio: %.2f%%\n", desvio);
+    printf("Tempo Médio: %.2f segundos\n", tempoMedio);
+    printf("Tempo Melhor: %.2f segundos\n", tempoMelhor);
+    
+    // Grava os resultados com os parâmetros do algoritmo genético
+    salvar_resultados("resultados.txt", melhorFO, mediaFO, desvio, tempoMedio, tempoMelhor, max_gen, pop_size);
+}
+
+
+// Função para salvar os resultados em um arquivo
+void salvar_resultados(const char* arquivo, double melhorFO, double mediaFO, double desvio, double tempoMedio, double tempoMelhor, int max_gen, int pop_size) {
+    FILE* f = fopen(arquivo, "a");
+    if (f == nullptr) {
+        printf("Erro ao abrir o arquivo para salvar os resultados.\n");
+        return;
+    }
+
+  
+    fprintf(f, "Gerações: %d\n", max_gen);
+    fprintf(f, "Tamanho da População: %d\n", pop_size);
+
+    fprintf(f, "Resultados do Algoritmo Genético:\n");
+    fprintf(f, "Melhor FO: %.2f\n", melhorFO);
+    fprintf(f, "FO Média: %.2f\n", mediaFO);
+    fprintf(f, "Desvio: %.2f%%\n", desvio);
+    fprintf(f, "Tempo Médio: %.2f segundos\n", tempoMedio);
+    fprintf(f, "Tempo Melhor: %.2f segundos\n", tempoMelhor);
+
+    fprintf(f, "\n");
+
+    fclose(f);
+}
+
 
 // Função para gerar um indivíduo aleatório
 Individuo gerar_individuo(int p) {
@@ -136,13 +190,21 @@ void mutacao(Individuo* ind, int p) {
 }
 
 // Algoritmo genético
-Individuo algoritmo_genetico(int p, int pop_size, int max_gen) {
+Individuo algoritmo_genetico(int p, int pop_size, int max_gen, int tempo_limite) {
     Individuo* populacao = new Individuo[pop_size];
     gerar_populacao(populacao, pop_size, p);
 
     Individuo melhor = populacao[0];
 
+    clock_t start = clock();  // Início da execução
+
     for (int gen = 0; gen < max_gen; gen++) {
+        clock_t end = clock();
+        double tempo_execucao = (double)(end - start) / CLOCKS_PER_SEC;
+        if (tempo_execucao >= tempo_limite) {
+            break;  // Limite de tempo alcançado
+        }
+
         Individuo* nova_populacao = new Individuo[pop_size];
 
         for (int i = 0; i < pop_size; i++) {
