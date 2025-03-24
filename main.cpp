@@ -12,12 +12,15 @@
 
 // Função principal
 int main() {
+    
+    srand(time(NULL));
+
     // Ler dados e calcular distâncias
-    ler_dados("inst20.txt");
+    ler_dados("inst200.txt");
     calculo_distancias();
 
     // Parâmetros do algoritmo genético
-    int p = 5;  // Número de hubs
+    int p = 30;  // Número de hubs
     int pop_size = POP_SIZE;  // Tamanho da população
     int max_gen = MAX_GEN;  // Número máximo de gerações
     int tempo_limite = 300;  // Limite de tempo em segundos para instâncias de 100 e 200 nós
